@@ -1,0 +1,29 @@
+[
+  {
+    "nim": "3337260170",
+    "nama": "Muhammad Mahadri Azzam Fawwaz Ramadhan",
+    "nilai": {
+      "Algoritma": 90.0,
+      "Basis Data": 90.0,
+      "CyberSecurity": 90.0
+    }
+  },
+  {
+    "nim": "333726091",
+    "nama": "Gianjing",
+    "nilai": {
+      "Algoritma": 90.0,
+      "Basis Data": 85.0,
+      "CyberSecurity": 80.0
+    }
+  },
+  {
+    "nim": "333726082",
+    "nama": "Dapon",
+    "nilai": {
+      "Algoritma": 85.0,
+      "Basis Data": 82.0,
+      "CyberSecurity": 70.0
+    }
+  }
+]
