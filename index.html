@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Mahasiswa</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mut:#667085;--bd:#e3e6ea;--ac:#2f6fed;--on:#fff;--bad:#d92d20;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#14161a;--card:#1d2026;--tx:#eceef1;--mut:#9aa3af;--bd:#2d323a;--ac:#6b9bff;--on:#10131a;--bad:#ff6b5e;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;margin:0 0 4px}
+.mut{color:var(--mut);font-size:13px;margin:4px 0 12px}
+nav{display:flex;gap:6px;margin:14px 0;overflow-x:auto}
+button,input,select{font:inherit;color:var(--tx)}
+nav button{border:1px solid var(--bd);background:var(--card);padding:8px 14px;border-radius:999px;cursor:pointer;white-space:nowrap}
+nav button.on{background:var(--ac);color:var(--on);border-color:var(--ac)}
+input,select{width:100%;padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:var(--card)}
+.row{display:flex;gap:8px;margin-bottom:8px}.row select{width:150px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:10px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.badge{background:var(--ac);color:var(--on);border-radius:8px;padding:2px 10px;font-weight:600}
+.nl{display:flex;flex-wrap:wrap;gap:4px 16px;margin:8px 0;color:var(--mut);font-size:13px}
+.act{display:flex;gap:8px;align-items:center}
+.btn{border:1px solid var(--bd);background:var(--card);padding:6px 12px;border-radius:8px;cursor:pointer}
+.btn.p{background:var(--ac);color:var(--on);border-color:var(--ac)}
+.btn.d{color:var(--bad);border-color:var(--bad)}
+label{display:block;margin:10px 0 4px;font-size:13px;color:var(--mut)}
+#msg{color:var(--bad);min-height:20px;margin:8px 0}
+.empty{text-align:center;color:var(--mut);padding:30px 0}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--bd)}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{color:var(--mut);font-weight:500;font-size:13px}
+</style>
+</head>
+<body>
+<main>
+<h1>🎓 Data Mahasiswa</h1>
+<nav>
+<button data-t="data" onclick="go('data')">Data</button>
+<button data-t="form" onclick="editMhs=null;go('form')">Tambah</button>
+<button data-t="ipk" onclick="go('ipk')">Ranking IPK</button>
+<button data-t="stat" onclick="go('stat')">Statistik</button>
+</nav>
+<div id="view"></div>
+</main>
+<script>
+const MK=["Algoritma","Basis Data","CyberSecurity"];
+let cache=[],editMhs=null,delNim=null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[c]);
+const f=n=>Number(n).toFixed(2);
+
+async function api(url,method="GET",body){
+  const r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:body&&JSON.stringify(body)});
+  const j=await r.json();
+  if(!r.ok)throw new Error(j.pesan||"Terjadi kesalahan");
+  return j;
+}
+
+function go(t){
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
+  ({data:viewData,form:viewForm,ipk:viewIpk,stat:viewStat})[t]($("#view"));
+}
+
+function viewData(v){
+  v.innerHTML=`<div class="row"><input id="q" placeholder="Cari NIM atau nama"><select id="g"><option value="">Semua grade</option>${[..."ABCDE"].map(x=>`<option>${x}</option>`).join("")}</select></div><div id="sum" class="mut"></div><div id="list"></div>`;
+  $("#q").oninput=list;$("#g").onchange=list;list();
+}
+async function list(){
+  try{
+    const h=await api(`/api/mahasiswa?q=${encodeURIComponent($("#q").value)}&grade=${$("#g").value}`);
+    cache=h.daftar;const s=h.ringkasan;
+    $("#sum").textContent=s.total?`${s.total} mahasiswa · rata-rata kelas ${f(s.rata_kelas)} · tertinggi ${s.tertinggi.nama} (${f(s.tertinggi.rata)})`:"";
+    $("#list").innerHTML=cache.length?cache.map(card).join(""):`<p class="empty">${s.total?"Data tidak ditemukan.":"Belum ada data."}</p>`;
+  }catch(e){$("#list").innerHTML=`<p class="empty">Tidak bisa terhubung ke server Python.</p>`}
+}
+function card(m,i){
+  const act=delNim===m.nim
+    ?`<span>Hapus ${esc(m.nama)}?</span><button class="btn d" onclick="hapus(${i})">Ya</button><button class="btn" onclick="delNim=null;list()">Batal</button>`
+    :`<button class="btn" onclick="edit(${i})">Edit</button><button class="btn d" onclick="delNim=cache[${i}].nim;list()">Hapus</button>`;
+  return `<div class="card"><div class="top"><div><b>${esc(m.nama)}</b><div class="mut" style="margin:0">NIM ${esc(m.nim)}</div></div><span class="badge">${m.grade}</span></div>
+  <div class="nl">${MK.map(k=>`<span>${k}: ${m.nilai[k]}</span>`).join("")}</div>
+  <div class="top"><span>Rata-rata <b>${f(m.rata)}</b> · IPK <b>${f(m.ipk)}</b></span><div class="act">${act}</div></div></div>`;
+}
+function edit(i){editMhs=cache[i];go("form")}
+async function hapus(i){
+  await api("/api/mahasiswa/"+encodeURIComponent(cache[i].nim),"DELETE");
+  delNim=null;list();
+}
+
+function viewForm(v){
+  const m=editMhs;
+  v.innerHTML=`<div class="card"><b>${m?"Edit Mahasiswa":"Tambah Mahasiswa"}</b>
+  <label>NIM</label><input id="nim" value="${m?esc(m.nim):""}" ${m?"disabled":""}>
+  <label>Nama</label><input id="nama" value="${m?esc(m.nama):""}">
+  ${MK.map((k,i)=>`<label>Nilai ${k}</label><input id="n${i}" inputmode="decimal" value="${m?m.nilai[k]:""}" placeholder="0-100">`).join("")}
+  <div id="msg"></div><div class="act"><button class="btn p" onclick="simpan()">Simpan</button><button class="btn" onclick="editMhs=null;go('data')">Batal</button></div></div>`;
+  const ids=["nim","nama",...MK.map((k,i)=>"n"+i)];
+  ids.forEach((id,i)=>$("#"+id).addEventListener("keydown",e=>{
+    if(e.key!=="Enter")return;
+    e.preventDefault();
+    i<ids.length-1?$("#"+ids[i+1]).focus():simpan();
+  }));
+  (m?$("#nama"):$("#nim")).focus();
+}
+async function simpan(){
+  const nilai={};
+  MK.forEach((k,i)=>{const t=$("#n"+i).value.trim();nilai[k]=(t===""||isNaN(+t))?t:+t});
+  const body={nim:$("#nim").value.trim(),nama:$("#nama").value.trim(),nilai};
+  try{
+    if(editMhs)await api("/api/mahasiswa/"+encodeURIComponent(editMhs.nim),"PUT",body);
+    else await api("/api/mahasiswa","POST",body);
+    editMhs=null;go("data");
+  }catch(e){$("#msg").textContent=e.message}
+}
+
+async function viewIpk(v){
+  const u=await api("/api/ranking");
+  if(!u.length){v.innerHTML='<p class="empty">Belum ada data.</p>';return}
+  v.innerHTML=`<p class="mut">IPK = rata-rata bobot grade tiap mata kuliah (A=4, B=3, C=2, D=1, E=0).</p><div class="tw"><table><tr><th>#</th><th>Nama</th><th>IPK</th><th>Rata-rata</th><th>Grade</th></tr>${u.map((m,i)=>`<tr><td>${i+1}</td><td>${esc(m.nama)}</td><td><b>${f(m.ipk)}</b></td><td>${f(m.rata)}</td><td>${m.grade}</td></tr>`).join("")}</table></div>`;
+}
+async function viewStat(v){
+  const s=await api("/api/statistik");
+  if(!s.length){v.innerHTML='<p class="empty">Belum ada data.</p>';return}
+  v.innerHTML=`<div class="tw"><table><tr><th>Mata kuliah</th><th>Rata-rata</th><th>Tertinggi</th><th>Terendah</th></tr>${s.map(r=>`<tr><td>${r.mk}</td><td>${f(r.rata)}</td><td>${r.max}</td><td>${r.min}</td></tr>`).join("")}</table></div>`;
+}
+
+go("data");
+</script>
+</body>
+</html>
